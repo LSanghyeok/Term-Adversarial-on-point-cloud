@@ -11,7 +11,7 @@ def fgsm_attack(data, epsilon, data_grad):
     # Return the perturbed image
     return perturbed_data
 
-def attacktest(model_a, model_t, device, test_loader, b_size, epsilon):
+def attacktest(model_a, model_t, device, test_loader, epsilon):
     # Accuracy counter
     correct = 0
     adv_examples = []
