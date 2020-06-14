@@ -86,3 +86,60 @@ class PointCNN(torch.nn.Module):
         x = F.dropout(x, p=0.5, training=self.training)
         x = self.lin3(x)
         return F.log_softmax(x, dim=-1)
+
+    
+class Defense_PointNet(torch.nn.Module):
+    def __init__(self, num_classes):
+        super(Defense_PointNet, self).__init__()
+        
+        features = [] 
+        nn = Seq(Lin(3, 64), ReLU(), Lin(64, 64))
+        features.append(PointConv(local_nn=nn))
+        nn = Seq(Lin(67, 128), ReLU(), Lin(128, 128))
+        features.append(PointConv(local_nn=nn))
+        nn = Seq(Lin(131, 256), ReLU(), Lin(256, 256))
+        features.append(PointConv(local_nn=nn))
+        self.features = torch.nn.ModuleList(features)
+        
+        layers=[]
+        layers.append(Lin(256, 256))
+        layers.append(Lin(256, 256))
+        layers.append(Lin(256, num_classes))
+        self.classifier = torch.nn.ModuleList(layers)
+        
+        layers=[]
+        layers.append(Lin(256, 256))
+        layers.append(Lin(256, 2))
+        self.discriminator = torch.nn.ModuleList(layers)
+        
+    def forward(self, pos, batch):
+        radius = 0.2
+        edge_index = radius_graph(pos, r=radius, batch=batch)
+        x = F.relu(self.features[0](None, pos, edge_index))
+
+        idx = fps(pos, batch, ratio=0.5)
+        x, pos, batch = x[idx], pos[idx], batch[idx]
+
+        radius = 0.4
+        edge_index = radius_graph(pos, r=radius, batch=batch)
+        x = F.relu(self.features[1](x, pos, edge_index))
+
+        idx = fps(pos, batch, ratio=0.25)
+        x, pos, batch = x[idx], pos[idx], batch[idx]
+
+        radius = 1
+        edge_index = radius_graph(pos, r=radius, batch=batch)
+        x = F.relu(self.features[2](x, pos, edge_index))
+
+        x = global_max_pool(x, batch)
+        feat=x
+
+        x = F.relu(self.classifier[0](x))
+        x = F.relu(self.classifier[1](x))
+        x = F.dropout(x, p=0.5, training=self.training)
+        x = self.classifier[2](x)
+        
+        x2 = F.relu(self.discriminator[0](feat))
+        x2 = F.dropout(x2, p=0.5, training=self.training)
+        x2 = self.discriminator[1](x2)
+        return F.log_softmax(x, dim=-1), F.log_softmax(x2, dim=-1)
