@@ -73,13 +73,13 @@ def attacktest(model_a, model_t, device, test_loader, epsilon):
     return final_acc, adv_examples
 
 #attack by d
-def attacktest2(model_a, model_t, device, test_loader, epsilon):
+def attacktest2(defense_PN, model_t, device, test_loader, epsilon):
     # Accuracy counter
     correct = 0
     adv_examples = []
     total = len(test_loader.dataset)
     
-    model_a.to(device)
+    defense_PN.to(device)
     model_t.to(device)
     
     
@@ -88,31 +88,28 @@ def attacktest2(model_a, model_t, device, test_loader, epsilon):
         
         # Set requires_grad attribute of tensor. Important for Attack
         data.pos.requires_grad = True
-
-        # Forward pass the data through the model
-        if model_a._get_name() == 'Defense_PointNet':
-            output, _ = model_a(data.pos, data.batch)
-        else:
-            output = model_a(data.pos, data.batch)
+        
+        cls_score, D_score = defense_PN(data.pos, data.batch)
         
         #이미 틀린 정답 제외
-        pred = output.max(1)[1]
-        keep = pred.eq(data.y)
+#         pred = output.max(1)[1]
+#         keep = pred.eq(data.y)
         
         # Calculate the loss
-        loss = F.nll_loss(output, data.y)
-
+        loss1 = F.nll_loss(D_score, torch.ones(len(data.y), dtype=torch.long).to(device))
+        loss2 = F.nll_loss(cls_score, data.y)
         # Zero all existing gradients
-        model_a.zero_grad()
+        defense_PN.zero_grad()
 
         # Calculate gradients of model in backward pass
+        loss = loss1 + loss2
         loss.backward()
-
+        
         # Collect datagrad
         data_grad = data.pos.grad.data
-        data_grad = data_grad.reshape(len(data.y), -1, 3)
-        data_grad[~keep] = 0 #initialize alreay incorrect answer's grad to 0
-        data_grad = data_grad.reshape(-1, 3)
+#         data_grad = data_grad.reshape(len(data.y), -1, 3)
+#         data_grad[~keep] = 0 #initialize alreay incorrect answer's grad to 0
+#         data_grad = data_grad.reshape(-1, 3)
         
         # Call FGSM Attack
         perturbed_data = fgsm_attack(data.pos, epsilon, data_grad)
