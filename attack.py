@@ -73,7 +73,7 @@ def attacktest(model_a, model_t, device, test_loader, epsilon):
     return final_acc, adv_examples
 
 #attack by d
-def attacktest2(defense_PN, model_t, device, test_loader, epsilon):
+def attacktest2(defense_PN, model_t, device, test_loader, epsilon, C=False):
     # Accuracy counter
     correct = 0
     adv_examples = []
@@ -82,6 +82,7 @@ def attacktest2(defense_PN, model_t, device, test_loader, epsilon):
     defense_PN.to(device)
     model_t.to(device)
     
+    loss2=0
     
     for data in test_loader:
         data = data.to(device)
@@ -97,7 +98,8 @@ def attacktest2(defense_PN, model_t, device, test_loader, epsilon):
         
         # Calculate the loss
         loss1 = F.nll_loss(D_score, torch.ones(len(data.y), dtype=torch.long).to(device))
-        loss2 = F.nll_loss(cls_score, data.y)
+        if C==True:
+            loss2 = F.nll_loss(cls_score, data.y)
         # Zero all existing gradients
         defense_PN.zero_grad()
 

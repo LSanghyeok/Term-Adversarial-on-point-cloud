@@ -38,7 +38,7 @@ def run(train_loader, test_loader, model, epochs, batch_size, lr,
                 param_group['lr'] = lr_decay_factor * param_group['lr']
 
                 
-def train(model, optimizer, train_loader, eps,device):
+def train(model, optimizer, train_loader,device):
     model.train()
     losses=0
     total = len(train_loader)
