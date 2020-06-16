@@ -5,4 +5,13 @@ torch_geometric, torch tutorial기반 작성
 
 Point Net++,Point CNN, Defense-PointNet 대상 adversarial attack 시행
 
+
+
+adversarial attack in point cloud
 ![adversarial](./saves/adversarial.png)
+
+Transferability of adversarial example in point cloud
+![transfer](./saves/transfer.png)
+
+Visualization of adversarial attacked data(based on Pointnet++)
+![visualization](./saves/visualization.png)
